@@ -1,4 +1,4 @@
-"""排序与简报渲染（从用户 AI_brief/pipeline.py 原样抽取，去掉磁盘落盘部分）。"""
+"""排序与简报渲染（从用户 AI_brief/pipeline.py 原样抽取，去掉磁盘落盘部分，新增星级输出）。"""
 
 from __future__ import annotations
 
@@ -24,6 +24,13 @@ def rank(items: list[BriefItem], now: datetime) -> list[BriefItem]:
     return sorted(items, key=lambda i: i.score, reverse=True)
 
 
+def format_stars(stars: float) -> str:
+    """星级文本：★ 实心、⯪ 半星、☆ 空心，如 ★★★★⯪。"""
+    full = int(stars)
+    half = 1 if stars - full >= 0.5 else 0
+    return "★" * full + ("⯪" if half else "") + "☆" * (5 - full - half)
+
+
 def render_markdown(items: list[BriefItem], report: PipelineReport) -> str:
     lines = [
         f"# 智能资讯简报 · {report.date}",
@@ -42,8 +49,9 @@ def render_markdown(items: list[BriefItem], report: PipelineReport) -> str:
         lines.append(f"## {category}")
         for i, item in enumerate(group, 1):
             when = f" · {item.published_at:%m-%d}" if item.published_at else ""
+            stars = f" · {format_stars(item.stars)} {item.stars}" if item.stars else ""
             lines.append(f"### {i}. {item.title}")
-            lines.append(f"`{item.source}`{when} · 可信度 **{item.credibility}** · 综合分 {item.score}")
+            lines.append(f"`{item.source}`{when} · 可信度 **{item.credibility}**{stars}")
             lines.append("")
             lines.append(item.summary)
             if item.entities:

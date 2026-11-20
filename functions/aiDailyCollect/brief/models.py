@@ -40,6 +40,7 @@ class BriefItem(BaseModel):
     entities: list[str] = Field(default_factory=list)
     credibility: int = Field(default=50, ge=0, le=100)
     score: float = 0.0
+    stars: float = 0.0  # 编辑推荐星级：0.5–5，半星颗粒度
     source: str = ""
     url: str = ""
     published_at: datetime | None = None

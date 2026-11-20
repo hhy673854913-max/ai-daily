@@ -1,7 +1,7 @@
 """aiDailyCollect —— CloudBase 云函数入口（每日 07:30 定时触发）。
 
 基于既有 AI_brief 流水线（sources / dedup / extract / core），
-产物不再落盘，而是通过 HTTP ingest 写入 Node API 函数 → 云数据库。
+产出「每日精选 10 条 + 星级评价」简报，通过 HTTP ingest 写入 Node API 函数 → 云数据库。
 """
 from __future__ import annotations
 
@@ -35,6 +35,8 @@ from brief.sources import (  # noqa: E402
 INGEST_URL = os.environ.get("INGEST_URL", "")
 INGEST_TOKEN = os.environ.get("INGEST_TOKEN", "")
 MAX_ENRICH = 8  # 串行抓正文很贵，云端只补前 N 条
+TOP_N = 10      # 每日精选条数
+STAR_MIN, STAR_MAX = 2.5, 5.0  # 入选即有价值：星级区间 [2.5, 5]，半星颗粒度
 
 
 # ---------------- LLM 客户端（可选，OpenAI 兼容接口） ----------------
@@ -121,10 +123,22 @@ def item_to_doc(item, day: str) -> dict:
         "entities": item.entities,
         "credibility": item.credibility,
         "score": item.score,
+        "stars": item.stars,
         "publishedAt": published_ms,
         "collectedAt": int(time.time() * 1000),
         "day": day,
     }
+
+
+def assign_stars(items) -> None:
+    """资深编辑视角：入选条目按综合分线性映射到 [2.5, 5]，半星颗粒度。"""
+    if not items:
+        return
+    scores = [i.score for i in items]
+    lo, hi = min(scores), max(scores)
+    for it in items:
+        norm = 1.0 if hi == lo else (it.score - lo) / (hi - lo)
+        it.stars = round((STAR_MIN + norm * (STAR_MAX - STAR_MIN)) * 2) / 2
 
 
 # ---------------- 主流程 ----------------
@@ -153,6 +167,8 @@ async def run() -> dict:
     client = get_llm_client()
     brief_items, failed = await extract_batch(deduped, client, use_llm=client is not None)
     ranked = rank(brief_items, now)
+    picked = ranked[:TOP_N]
+    assign_stars(picked)
 
     day = now.strftime("%Y-%m-%d")
     report = PipelineReport(
@@ -169,22 +185,22 @@ async def run() -> dict:
         duration_s=round(time.perf_counter() - t0, 2),
         failed_items=failed,
     )
-    markdown = render_markdown(ranked, report)
+    markdown = render_markdown(picked, report)
 
     result = post_ingest(
         {
             "token": INGEST_TOKEN,
             "day": day,
-            "items": [item_to_doc(i, day) for i in ranked],
             "brief": {
                 "day": day,
+                "items": [item_to_doc(i, day) for i in picked],
                 "markdown": markdown,
                 "report": json.loads(report.model_dump_json()),
                 "createdAt": int(time.time() * 1000),
             },
         }
     )
-    return {"ok": True, "day": day, "items": len(ranked), "ingest": result}
+    return {"ok": True, "day": day, "picked": len(picked), "ingest": result}
 
 
 def main(event, context):
