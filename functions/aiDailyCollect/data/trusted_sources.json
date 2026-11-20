@@ -1,0 +1,44 @@
+[
+  {
+    "name": "机器之心",
+    "rss": "https://www.jiqizhixin.com/rss",
+    "tier": "垂直媒体",
+    "enabled": true
+  },
+  {
+    "name": "量子位",
+    "rss": "https://www.qbitai.com/feed",
+    "tier": "垂直媒体",
+    "enabled": true
+  },
+  {
+    "name": "36氪",
+    "rss": "https://36kr.com/feed",
+    "tier": "权威媒体",
+    "enabled": true
+  },
+  {
+    "name": "InfoQ 中文",
+    "rss": "https://www.infoq.cn/feed",
+    "tier": "权威媒体",
+    "enabled": true
+  },
+  {
+    "name": "TechCrunch AI",
+    "rss": "https://techcrunch.com/category/artificial-intelligence/feed/",
+    "tier": "权威媒体",
+    "enabled": true
+  },
+  {
+    "name": "The Verge AI",
+    "rss": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+    "tier": "权威媒体",
+    "enabled": true
+  },
+  {
+    "name": "arXiv cs.AI/LG/CL",
+    "rss": "https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=20",
+    "tier": "官方公告",
+    "enabled": true
+  }
+]
