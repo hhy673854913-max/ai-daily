@@ -1,12 +1,11 @@
-// aiDailyApi — 资讯查询 / 写入 HTTP 云函数
+// aiDailyApi — 简报查询 / 写入 HTTP 云函数
 //
 // 查询（GET，匿名可读）：
-//   ?day=2026-11-20&lang=zh&source=xxx&category=技术&page=1&pageSize=30
-//   ?mode=days                有数据的日期列表（归档导航）
-//   ?mode=top&day=...         当日综合分最高的条目
-//   ?mode=brief&day=...       每日简报（markdown + 运行报表）
+//   ?mode=days                有简报的日期列表（历史归档）
+//   ?mode=brief&day=...       某日简报（10 条精选 + 星级 + 运行报表）
+//   ?day=...&lang=...         资讯列表（兼容字段查询）
 //
-// 写入（POST，需 X-Ingest-Token）：
+// 写入（POST，需 token）：
 //   { token, day, items: [...], brief: {...} }   由 aiDailyCollect 采集函数调用
 const cloud = require('@cloudbase/node-sdk');
 
@@ -123,8 +122,13 @@ exports.main = async (event) => {
     const col = db.collection(NEWS);
 
     if (q.mode === 'days') {
-      const res = await col.orderBy('publishedAt', 'desc').limit(1000).field({ day: true }).get();
-      const days = [...new Set((res.data || []).map(d => d.day))].sort().reverse();
+      // 归档：有简报的日期（来自 ai_daily_briefs）
+      const res = await db.collection(BRIEFS)
+        .orderBy('day', 'desc')
+        .limit(365)
+        .field({ day: true })
+        .get();
+      const days = [...new Set((res.data || []).map(d => d.day))];
       return json(200, { ok: true, data: { days } });
     }
 
