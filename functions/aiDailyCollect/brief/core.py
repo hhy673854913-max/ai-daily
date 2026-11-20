@@ -1,4 +1,4 @@
-"""排序与简报渲染（从用户 AI_brief/pipeline.py 原样抽取，去掉磁盘落盘部分，新增星级输出）。"""
+"""排序与简报渲染（从用户 AI_brief/pipeline.py 原样抽取，去掉磁盘落盘部分）。"""
 
 from __future__ import annotations
 
@@ -22,6 +22,33 @@ def rank(items: list[BriefItem], now: datetime) -> list[BriefItem]:
     for item in items:
         item.score = round(item.credibility * 0.7 + freshness_score(item, now) * 100 * 0.3, 2)
     return sorted(items, key=lambda i: i.score, reverse=True)
+
+
+def pick_top_with_coverage(
+    ranked: list[BriefItem], top_n: int, categories: tuple[str, ...]
+) -> list[BriefItem]:
+    """精选 top_n，且每个类别至少兜底 1 条（类别无货时自然跳过）。
+
+    先按排名为每个类别取第 1 条，再按分数补齐剩余名额，最终结果保持分数降序。
+    """
+    by_cat: dict[str, list[BriefItem]] = {}
+    for it in ranked:
+        by_cat.setdefault(it.category, []).append(it)
+
+    picked: list[BriefItem] = []
+    picked_ids: set[int] = set()
+    for cat in categories:
+        group = by_cat.get(cat)
+        if group:
+            picked.append(group[0])
+            picked_ids.add(id(group[0]))
+    for it in ranked:
+        if len(picked) >= top_n:
+            break
+        if id(it) not in picked_ids:
+            picked.append(it)
+            picked_ids.add(id(it))
+    return sorted(picked, key=lambda i: i.score, reverse=True)
 
 
 def format_stars(stars: float) -> str:

@@ -42,6 +42,7 @@ class BriefItem(BaseModel):
     score: float = 0.0
     stars: float = 0.0  # 编辑推荐星级：0.5–5，半星颗粒度
     analysis: str = ""  # AI 编辑点评：两句话说明评分依据
+    snark: int = 0      # 毒舌指数：1-5，0 表示未评分
     source: str = ""
     url: str = ""
     published_at: datetime | None = None
@@ -57,6 +58,7 @@ class TrustedSource(BaseModel):
     name: str
     rss: str
     tier: str = "垂直媒体"
+    category: str = "其他"  # 信源归属类别：融资/产品/政策/技术/其他（注册表分桶用）
     enabled: bool = True
 
 

@@ -1,0 +1,27 @@
+[
+  { "name": "VentureBeat AI", "rss": "https://venturebeat.com/category/ai/feed/", "tier": "权威媒体", "category": "融资" },
+  { "name": "TechCrunch AI", "rss": "https://techcrunch.com/category/artificial-intelligence/feed/", "tier": "权威媒体", "category": "融资" },
+  { "name": "Crunchbase News", "rss": "https://news.crunchbase.com/feed/", "tier": "权威媒体", "category": "融资" },
+  { "name": "极客公园", "rss": "https://www.geekpark.net/rss", "tier": "垂直媒体", "category": "融资" },
+
+  { "name": "The Verge AI", "rss": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "tier": "权威媒体", "category": "产品" },
+  { "name": "OpenAI 官方博客", "rss": "https://openai.com/news/rss.xml", "tier": "官方公告", "category": "产品" },
+  { "name": "Anthropic 新闻", "rss": "https://www.anthropic.com/news/rss.xml", "tier": "官方公告", "category": "产品" },
+  { "name": "Meta AI 博客", "rss": "https://ai.meta.com/blog/rss/", "tier": "官方公告", "category": "产品" },
+  { "name": "WIRED AI", "rss": "https://www.wired.com/feed/tag/ai/latest/rss", "tier": "权威媒体", "category": "产品" },
+
+  { "name": "InfoQ 中文", "rss": "https://www.infoq.cn/feed", "tier": "权威媒体", "category": "政策" },
+  { "name": "MIT News AI", "rss": "https://news.mit.edu/rss/topic/artificial-intelligence2", "tier": "权威媒体", "category": "政策" },
+  { "name": "Ars Technica", "rss": "https://feeds.arstechnica.com/arstechnica/technology-lab", "tier": "权威媒体", "category": "政策" },
+  { "name": "Nature 机器智能", "rss": "https://www.nature.com/natmachintell.rss", "tier": "权威媒体", "category": "政策" },
+  { "name": "MIT科技评论 AI", "rss": "https://www.technologyreview.com/topic/artificial-intelligence/feed/", "tier": "权威媒体", "category": "政策" },
+
+  { "name": "量子位", "rss": "https://www.qbitai.com/feed", "tier": "垂直媒体", "category": "技术" },
+  { "name": "arXiv cs.AI/LG/CL", "rss": "https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=20", "tier": "官方公告", "category": "技术" },
+  { "name": "Google DeepMind 博客", "rss": "https://deepmind.google/blog/rss.xml", "tier": "官方公告", "category": "技术" },
+  { "name": "Hugging Face 博客", "rss": "https://huggingface.co/blog/feed.xml", "tier": "官方公告", "category": "技术" },
+
+  { "name": "少数派", "rss": "https://sspai.com/feed", "tier": "垂直媒体", "category": "其他" },
+  { "name": "The Decoder", "rss": "https://the-decoder.com/feed/", "tier": "垂直媒体", "category": "其他" },
+  { "name": "爱范儿", "rss": "https://www.ifanr.com/feed", "tier": "垂直媒体", "category": "其他" }
+]
