@@ -58,7 +58,7 @@ def heuristic_extract(raw: RawItem) -> BriefItem:
     verifiable = 20 if re.search(r"\d", text) else 10
     return BriefItem.from_raw(
         raw,
-        title=raw.title[:30],
+        title=raw.title.strip(),
         summary=first_sentence(raw.content),
         category=guess_category(text),
         entities=re.findall(r"[A-Z][A-Za-z]{2,}", text)[:5],
@@ -77,10 +77,8 @@ def llm_extract(client: Any, raw: RawItem, *, max_tokens: int = 500) -> BriefIte
         response_format={"type": "json_object"},
     )
     parsed = client_parse(result.content)
+    # 入库保留完整标题，展示截断交给前端/CSS
     title = str(parsed.get("title") or raw.title).strip()
-    if len(title) > 30:
-        # 避免把英文单词从中间切断
-        title = title[:30].rsplit(" ", 1)[0] + "…"
     return BriefItem.from_raw(
         raw,
         title=title,
