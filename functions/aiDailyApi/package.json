@@ -1,0 +1,9 @@
+{
+  "name": "ai-daily-api",
+  "version": "1.0.0",
+  "description": "AI 资讯查询 HTTP 接口",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.9.6"
+  }
+}
