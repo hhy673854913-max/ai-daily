@@ -9,6 +9,7 @@
   --accent: #b03a24;
   --accent-deep: #8c2c1a;
   --paper-badge: #e9e2d0;
+  --gold: #c8963c;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -147,103 +148,104 @@ a { color: inherit; }
   border-top: 1px solid var(--rule);
 }
 
-/* 今日头条 */
-.top-section { margin-bottom: 34px; }
-
-.top-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1px;
-  background: var(--rule);
-  border: 1px solid var(--rule);
+.pipeline-report {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  border: 1px dashed var(--rule);
+  border-radius: 3px;
+  padding: 8px 14px;
+  margin-bottom: 20px;
+  background: var(--paper-deep);
 }
 
-.top-card {
-  background: var(--paper-deep);
-  padding: 20px 18px;
-  text-decoration: none;
+.pipeline-report:empty { display: none; }
+
+/* ---------- 简报卡片 ---------- */
+.brief-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  transition: background 0.15s;
+  gap: 14px;
 }
 
-.top-card:hover { background: #e7dfcc; }
+.brief-card {
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--ink);
+  background: var(--paper);
+  padding: 18px 20px 14px;
+  transition: box-shadow 0.15s;
+}
 
-.top-card .rank {
+.brief-card:hover {
+  box-shadow: 0 2px 12px rgba(27, 24, 18, 0.08);
+}
+
+.brief-card-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.brief-rank {
   font-family: Georgia, serif;
   font-style: italic;
-  font-size: 26px;
-  color: var(--accent);
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--rule);
+  flex-shrink: 0;
+  min-width: 40px;
 }
 
-.top-card h3 {
+.brief-card:nth-child(-n + 3) .brief-rank { color: var(--accent); }
+
+.brief-title-wrap { flex: 1; min-width: 0; }
+
+.brief-title {
   font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: 16.5px;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-.top-card .meta { margin-top: auto; }
-
-/* 来源筛选 chips */
-.source-chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.chip {
-  font: inherit;
-  font-size: 12px;
-  padding: 3px 11px;
-  border-radius: 999px;
-  border: 1px solid var(--rule);
-  background: var(--paper-badge);
-  color: var(--ink-soft);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.chip:hover { border-color: var(--ink-faint); }
-
-.chip.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-/* 资讯列表 */
-.feed { border-top: 1px solid var(--ink); }
-
-.item {
-  display: block;
-  text-decoration: none;
-  padding: 18px 4px;
-  border-bottom: 1px solid var(--rule);
-  transition: background 0.12s;
-}
-
-.item:hover { background: var(--paper-deep); }
-
-.item-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.item-title {
-  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: 17.5px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.5;
-  flex: 1;
-  min-width: 200px;
+  text-decoration: none;
 }
 
-.item:hover .item-title { color: var(--accent-deep); }
+.brief-title:hover { color: var(--accent-deep); text-decoration: underline; }
+
+.brief-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* 星级：底层灰星 + 上层金星按宽度裁剪，天然支持半星 */
+.stars {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.stars-bg { color: var(--rule); }
+
+.stars-fg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--gold);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.stars-num {
+  margin-left: 7px;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 0;
+}
 
 .badge {
   flex-shrink: 0;
@@ -256,23 +258,29 @@ a { color: inherit; }
   white-space: nowrap;
 }
 
-.badge.paper-badge {
-  border-color: var(--accent);
-  color: var(--accent);
+.cat-badge { font-weight: 600; }
+
+.brief-summary {
+  margin-top: 10px;
+  font-size: 14.5px;
+  color: var(--ink-soft);
 }
 
-.item-summary {
-  margin-top: 6px;
-  font-size: 14px;
+.entities { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+.entity {
+  font-size: 11.5px;
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: var(--paper-badge);
+  border: 1px solid var(--rule);
   color: var(--ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .meta {
-  margin-top: 8px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
   font-size: 12px;
   color: var(--ink-faint);
   display: flex;
@@ -281,9 +289,53 @@ a { color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 
-.meta .score { color: var(--accent); font-weight: 600; }
+.meta .cred { color: var(--ink-soft); }
 
-/* 状态区 */
+/* ---------- 历史简报 ---------- */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--ink);
+}
+
+.history-item {
+  font: inherit;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 6px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.history-item:hover { background: var(--paper-deep); }
+
+.history-day {
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.history-item:hover .history-day { color: var(--accent-deep); }
+
+.history-week { font-size: 12.5px; color: var(--ink-faint); }
+
+.today-tag {
+  font-style: normal;
+  font-size: 11px;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ---------- 状态区 ---------- */
 .feed-state {
   text-align: center;
   color: var(--ink-faint);
@@ -305,7 +357,11 @@ a { color: inherit; }
 .feed-state .retry:hover { background: var(--ink); color: var(--paper); }
 
 /* 骨架屏 */
-.skeleton { padding: 18px 4px; border-bottom: 1px solid var(--rule); }
+.skeleton {
+  padding: 18px 4px;
+  border: 1px solid var(--rule);
+  margin-bottom: 14px;
+}
 
 .skeleton .line {
   height: 14px;
@@ -325,88 +381,6 @@ a { color: inherit; }
   100% { background-position: -200% 0; }
 }
 
-.load-more-wrap { text-align: center; padding: 24px 0 8px; }
-
-.load-more {
-  font: inherit;
-  font-size: 14px;
-  padding: 8px 30px;
-  border: 1px solid var(--ink);
-  background: none;
-  color: var(--ink);
-  cursor: pointer;
-  border-radius: 3px;
-  letter-spacing: 0.1em;
-}
-
-.load-more:hover { background: var(--ink); color: var(--paper); }
-
-/* 实体标签与可信度 */
-.entities { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
-
-.entity {
-  font-size: 11.5px;
-  padding: 1px 8px;
-  border-radius: 3px;
-  background: var(--paper-badge);
-  border: 1px solid var(--rule);
-  color: var(--ink-soft);
-}
-
-.meta .cred { color: var(--ink-soft); }
-
-.cat-badge { font-weight: 600; }
-
-/* 每日简报 */
-.brief-content {
-  font-size: 15px;
-  line-height: 1.8;
-}
-
-.brief-content h1 {
-  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: 24px;
-  letter-spacing: 0.08em;
-  margin-bottom: 8px;
-}
-
-.brief-content h2 {
-  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: 18px;
-  margin: 26px 0 10px;
-  padding-left: 10px;
-  border-left: 4px solid var(--accent);
-}
-
-.brief-content h3 {
-  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: 16.5px;
-  margin: 18px 0 6px;
-}
-
-.brief-content blockquote {
-  border-left: 3px solid var(--rule);
-  padding: 6px 14px;
-  color: var(--ink-faint);
-  font-size: 13px;
-  margin: 10px 0 20px;
-  background: var(--paper-deep);
-}
-
-.brief-content p { margin: 6px 0; color: var(--ink-soft); }
-
-.brief-content code {
-  font-family: "SF Mono", Consolas, monospace;
-  font-size: 12.5px;
-  background: var(--paper-badge);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  padding: 1px 6px;
-}
-
-.brief-content a { color: var(--accent); }
-.brief-content a:hover { text-decoration: underline; }
-
 /* 页脚 */
 .footer {
   border-top: 3px double var(--ink);
@@ -421,5 +395,5 @@ a { color: inherit; }
 @media (max-width: 560px) {
   .filters { flex-direction: column; align-items: flex-start; }
   .archive-nav { align-self: stretch; justify-content: space-between; }
-  .item-title { font-size: 16px; }
+  .brief-title { font-size: 16px; }
 }
