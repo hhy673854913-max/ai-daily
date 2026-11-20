@@ -19,10 +19,11 @@ time.tzset()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from brief.core import rank, render_markdown  # noqa: E402
+from brief.core import pick_top_with_coverage, rank, render_markdown  # noqa: E402
 from brief.dedup import dedup  # noqa: E402
-from brief.extract import extract_batch  # noqa: E402
+from brief.extract import extract_batch, guess_category  # noqa: E402
 from brief.models import PipelineReport  # noqa: E402
+from brief import registry  # noqa: E402
 from brief.sources import (  # noqa: E402
     enrich_empty_content,
     fetch_all_trusted_sources,
@@ -93,6 +94,31 @@ def post_ingest(payload: dict) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
+def get_json(url: str, timeout: int = 15) -> dict:
+    """GET JSON（带总体容错，调用方自行决定降级策略）。"""
+    with urllib.request.urlopen(url, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def resolve_sources() -> tuple[list, list]:
+    """返回 (本次要抓的信源, 候选池)。
+
+    优先用远端注册表（ai_daily_sources，按最近质量排序、每类正选 3 + 试炼 2）；
+    远端不可用或为空时退回静态 trusted_sources.json，保证流水线不断。
+    """
+    pool = registry.load_source_pool()
+    remote = []
+    try:
+        data = get_json(f"{INGEST_URL}?mode=sources")
+        remote = (data.get("data") or {}).get("sources") or []
+    except Exception:
+        remote = []
+    if remote:
+        picked, _ = registry.select_sources(pool, remote)
+        return picked, pool
+    return load_trusted_sources(), pool
+
+
 SOURCE_ID = {
     "机器之心": "jiqizhixin",
     "量子位": "qbitai",
@@ -125,6 +151,7 @@ def item_to_doc(item, day: str) -> dict:
         "score": item.score,
         "stars": item.stars,
         "analysis": item.analysis,
+        "snark": item.snark,
         "publishedAt": published_ms,
         "collectedAt": int(time.time() * 1000),
         "day": day,
@@ -149,8 +176,9 @@ async def run() -> dict:
     t0 = time.perf_counter()
     now = datetime.now()
 
-    trusted_sources = load_trusted_sources()
-    raw_items = fetch_all_trusted_sources(trusted_sources, limit=30)
+    sources, pool = resolve_sources()
+    fetch_stats: dict[str, int] = {}
+    raw_items = fetch_all_trusted_sources(sources, limit=30, stats=fetch_stats)
     fetched = len(raw_items)
 
     time_filtered = filter_previous_day(raw_items, now)
@@ -167,8 +195,21 @@ async def run() -> dict:
 
     client = get_llm_client()
     brief_items, failed = await extract_batch(deduped, client, use_llm=client is not None)
+    # 类别补漏：LLM 倾向把政策/融资类资讯误归「其他」，导致某类空缺。
+    # 对「其他」条目用启发式关键词重判，只补缺的那几类，每类补 1 条即止。
+    missing = [c for c in registry.CATEGORIES if c not in {it.category for it in brief_items}]
+    if missing:
+        for it in brief_items:
+            if it.category == "其他":
+                guessed = guess_category(f"{it.title} {it.summary}")
+                if guessed in missing:
+                    it.category = guessed
+                    missing.remove(guessed)
+                    if not missing:
+                        break
     ranked = rank(brief_items, now)
-    picked = ranked[:TOP_N]
+    # 每个类别至少兜底 1 条，再按分数补齐
+    picked = pick_top_with_coverage(ranked, TOP_N, registry.CATEGORIES)
     assign_stars(picked)
 
     day = now.strftime("%Y-%m-%d")
@@ -201,7 +242,23 @@ async def run() -> dict:
             },
         }
     )
-    return {"ok": True, "day": day, "picked": len(picked), "ingest": result}
+
+    # 信源质量上报（失败不影响主流程，下次运行时注册表维持原样）
+    source_report_result = {"ok": False}
+    try:
+        body = registry.build_source_reports(pool, fetch_stats, deduped, brief_items)
+        body.update({"token": INGEST_TOKEN, "mode": "sourceReport"})
+        source_report_result = post_ingest(body)
+    except Exception as exc:  # noqa: BLE001
+        source_report_result = {"ok": False, "error": str(exc)}
+
+    return {
+        "ok": True,
+        "day": day,
+        "picked": len(picked),
+        "ingest": result,
+        "sourceReport": source_report_result,
+    }
 
 
 def main(event, context):

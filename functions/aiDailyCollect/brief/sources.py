@@ -2,13 +2,14 @@
 
 移植自用户 AI_brief/sources.py，仅改动：
 - 可信源列表路径改为函数内置 data/trusted_sources.json（云端无仓库外层目录）
-- 可信源名称归一（feed 自报名称不可控）
 - 其余过滤 / 增强逻辑保持不变
 """
 
 from __future__ import annotations
 
 import json
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -84,13 +85,22 @@ def entry_published_at(entry: object) -> datetime | None:
 
 
 def fetch_rss(url: str, limit: int = 20) -> list[RawItem]:
-    """抓取 RSS。feedparser 是可选依赖，缺了会给出明确提示。"""
+    """抓取 RSS。带浏览器 UA 与 12s 超时——多个站点对裸 urllib 返回 403/无限挂起。
+
+    feedparser 是可选依赖，缺了会给出明确提示。
+    """
     try:
         import feedparser  # type: ignore[import-not-found]
     except ImportError as exc:  # pragma: no cover - 取决于环境
         raise RuntimeError("需要先安装 feedparser：uv pip install feedparser") from exc
 
-    feed = feedparser.parse(url)
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+    )
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        data = resp.read()
+    feed = feedparser.parse(data)
     items: list[RawItem] = []
     for entry in feed.entries[:limit]:
         items.append(
@@ -105,25 +115,39 @@ def fetch_rss(url: str, limit: int = 20) -> list[RawItem]:
     return items
 
 
-def fetch_all_trusted_sources(sources: list[TrustedSource], limit: int = 20) -> list[RawItem]:
-    """按可信源列表逐个抓取 RSS，并聚合结果。"""
+def fetch_all_trusted_sources(
+    sources: list[TrustedSource], limit: int = 20, stats: dict | None = None,
+    max_workers: int = 8,
+) -> list[RawItem]:
+    """按可信源列表抓取 RSS（并发），并聚合结果。
+
+    stats 可选：传入 dict 时按信源名记录各源抓到的条数（注册表质量评估用）。
+    单源失败/超时只记 0 条，不阻断整体；慢源与快源并行，总耗时 ≈ 最慢的源。
+    """
     # feedparser 缺失属于环境配置错误，不应被当成单源失败吞掉
     try:
         import feedparser  # type: ignore[import-not-found]  # noqa: F401
     except ImportError as exc:  # pragma: no cover - 取决于环境
         raise RuntimeError("自动采集需要 feedparser：uv pip install feedparser") from exc
 
-    items: list[RawItem] = []
-    for source in sources:
+    def one(source: TrustedSource) -> tuple[TrustedSource, list[RawItem]]:
         try:
             fetched = fetch_rss(source.rss, limit=limit)
         except Exception:
-            # 单源失败不应阻断整体采集；这里选择跳过，保持流水线可用
-            continue
+            return source, []
         # 云端版本：来源统一归一到可信源配置名（feed 自报名称不可控）
         for it in fetched:
             it.source = source.name
-        items.extend(fetched)
+        return source, fetched
+
+    items: list[RawItem] = []
+    with ThreadPoolExecutor(max_workers=max_workers) as pool_ex:
+        futures = [pool_ex.submit(one, s) for s in sources]
+        for fut in as_completed(futures):
+            source, fetched = fut.result()
+            if stats is not None:
+                stats[source.name] = len(fetched)
+            items.extend(fetched)
     return items
 
 
