@@ -289,6 +289,13 @@ a { color: inherit; }
   vertical-align: 1px;
 }
 
+.ana-snark {
+  margin-right: 6px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  vertical-align: 1px;
+}
+
 .entities { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
 
 .entity {

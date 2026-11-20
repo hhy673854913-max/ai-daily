@@ -125,6 +125,11 @@
     if (item.analysis) {
       var ana = el('p', 'brief-analysis');
       ana.appendChild(el('span', 'ana-label', 'AI 编辑点评'));
+      if (item.snark >= 1 && item.snark <= 5) {
+        var snark = el('span', 'ana-snark', '🔥'.repeat(item.snark));
+        snark.title = '毒舌指数 ' + item.snark + '/5';
+        ana.appendChild(snark);
+      }
       ana.appendChild(document.createTextNode(item.analysis));
       card.appendChild(ana);
     }
