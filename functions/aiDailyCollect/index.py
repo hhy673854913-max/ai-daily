@@ -1,7 +1,7 @@
 """aiDailyCollect —— CloudBase 云函数入口（每日 07:30 定时触发）。
 
 基于既有 AI_brief 流水线（sources / dedup / extract / core），
-产出「每日精选 10 条 + 星级评价」简报，通过 HTTP ingest 写入 Node API 函数 → 云数据库。
+产物不再落盘，而是通过 HTTP ingest 写入 Node API 函数 → 云数据库。
 """
 from __future__ import annotations
 
@@ -124,6 +124,7 @@ def item_to_doc(item, day: str) -> dict:
         "credibility": item.credibility,
         "score": item.score,
         "stars": item.stars,
+        "analysis": item.analysis,
         "publishedAt": published_ms,
         "collectedAt": int(time.time() * 1000),
         "day": day,

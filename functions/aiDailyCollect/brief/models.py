@@ -41,6 +41,7 @@ class BriefItem(BaseModel):
     credibility: int = Field(default=50, ge=0, le=100)
     score: float = 0.0
     stars: float = 0.0  # 编辑推荐星级：0.5–5，半星颗粒度
+    analysis: str = ""  # AI 编辑点评：两句话说明评分依据
     source: str = ""
     url: str = ""
     published_at: datetime | None = None

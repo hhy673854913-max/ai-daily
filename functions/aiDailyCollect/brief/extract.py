@@ -56,17 +56,26 @@ def heuristic_extract(raw: RawItem) -> BriefItem:
     authority = next((v for k, v in SOURCE_TIER.items() if k in raw.source), 20)
     specific = min(30, 10 + 10 * sum(bool(re.search(p, text)) for p in (r"\d+%?", r"\d+亿", r"\d{4}年")))
     verifiable = 20 if re.search(r"\d", text) else 10
+    credibility = min(100, authority + verifiable + specific)
+    if specific >= 20:
+        detail_note = "内容包含具体数据和细节，信息比较扎实"
+    elif verifiable >= 20:
+        detail_note = "内容有一定事实支撑，但细节一般"
+    else:
+        detail_note = "内容比较笼统，缺少可核实的细节"
+    analysis = f"这条资讯来自{raw.source}，{detail_note}。综合信源权威性、可验证性和具体性，给出可信度 {credibility} 分。"
     return BriefItem.from_raw(
         raw,
         title=raw.title.strip(),
         summary=first_sentence(raw.content),
         category=guess_category(text),
         entities=re.findall(r"[A-Z][A-Za-z]{2,}", text)[:5],
-        credibility=min(100, authority + verifiable + specific),
+        credibility=credibility,
+        analysis=analysis,
     )
 
 
-def llm_extract(client: Any, raw: RawItem, *, max_tokens: int = 500) -> BriefItem:
+def llm_extract(client: Any, raw: RawItem, *, max_tokens: int = 700) -> BriefItem:
     """LLM 抽取；失败时抛出，由批量层决定降级策略。"""
     text = raw.content.strip() or raw.title.strip()
     prompt = EXTRACT_PROMPT.format(text=text[:2000])
@@ -86,6 +95,7 @@ def llm_extract(client: Any, raw: RawItem, *, max_tokens: int = 500) -> BriefIte
         category=parsed.get("category") if parsed.get("category") in CATEGORY_KEYWORDS else "其他",
         entities=[str(x) for x in (parsed.get("entities") or [])][:8],
         credibility=int(parsed.get("credibility") or 50),
+        analysis=str(parsed.get("analysis") or "").strip()[:300],
     )
 
 

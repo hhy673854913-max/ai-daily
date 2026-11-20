@@ -5,8 +5,8 @@
 
 from __future__ import annotations
 
-VERSION = "v2.1"
-CHANGELOG = "v2.1 增加 analysis 字段与 credibility 三维评分；v2.0 增加 category/entities"
+VERSION = "v2.2"
+CHANGELOG = "v2.2 analysis 改为面向普通读者的两句通俗点评；v2.1 增加 analysis 字段与 credibility 三维评分；v2.0 增加 category/entities"
 
 EXTRACT_PROMPT = """你是资深财经编辑。从下面的资讯原文中抽取结构化信息。
 
@@ -16,7 +16,8 @@ EXTRACT_PROMPT = """你是资深财经编辑。从下面的资讯原文中抽取
    - 信源权威性（40）：官方公告 40 / 权威媒体 30 / 垂直媒体 20 / 自媒体 10
    - 信息可验证性（30）：有具体数字、时间、可查证主体各 10
    - 内容具体性（30）：笼统表述 10 / 有细节 20 / 有数据与引述 30
-3. analysis 用两句话说明打分依据，必须引用原文片段。
+3. analysis 用两句通俗易懂的话点评：第一句说清这条资讯讲了什么、为什么值得关注；第二句用大白话说明打分依据（为什么值这个可信度分数），避免行业术语，面向普通读者。
+4. 只依据原文，不要推测；原文没有的信息填 null。
 
 输出 JSON：
 {{

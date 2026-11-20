@@ -39,9 +39,12 @@
     return e;
   }
 
+  // 年/月/日 时/分（Asia/Shanghai）
   function fmtTime(ts) {
     var d = new Date(ts + 8 * 3600e3);
-    return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2);
+    var p = function (n) { return ('0' + n).slice(-2); };
+    return d.getUTCFullYear() + '/' + (d.getUTCMonth() + 1) + '/' + d.getUTCDate() +
+      ' ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
   }
 
   function fmtDayCn(day) {
@@ -87,7 +90,7 @@
     var box = $('pipeline-report');
     if (!report) { box.textContent = ''; return; }
     box.textContent = '采集 ' + report.fetched + ' 条 → 过滤后 ' + report.after_dedup +
-      ' 条 → 精选 10 条' +
+      ' 条 → 精选 ' + (report.extracted_ok != null ? '10' : '') + ' 条' +
       ' ｜ 平均可信度 ' + report.avg_credibility + ' ｜ 耗时 ' + report.duration_s + 's';
   }
 
@@ -118,6 +121,13 @@
     card.appendChild(head);
 
     if (item.summary) card.appendChild(el('p', 'brief-summary', item.summary));
+
+    if (item.analysis) {
+      var ana = el('p', 'brief-analysis');
+      ana.appendChild(el('span', 'ana-label', 'AI 编辑点评'));
+      ana.appendChild(document.createTextNode(item.analysis));
+      card.appendChild(ana);
+    }
 
     if (item.entities && item.entities.length) {
       var tags = el('div', 'entities');
