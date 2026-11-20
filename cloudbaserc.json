@@ -1,0 +1,25 @@
+{
+  "envId": "florist-prod-d4gtxxh7s9a071ff0",
+  "version": "2.0",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/cloudbaserc.json",
+  "functionRootPath": "functions",
+  "functions": [
+    {
+      "name": "aiDailyCollect",
+      "type": "Event",
+      "runtime": "Python3.10",
+      "handler": "index.main",
+      "timeout": 300,
+      "triggers": [
+        { "name": "daily-0730", "type": "timer", "config": "0 30 7 * * * *" }
+      ]
+    },
+    {
+      "name": "aiDailyApi",
+      "type": "Event",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "timeout": 20
+    }
+  ]
+}

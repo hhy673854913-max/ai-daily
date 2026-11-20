@@ -1,0 +1,20 @@
+node_modules/
+*.log
+.DS_Store
+tools/
+dist/
+.env
+.env.*
+__pycache__/
+*.pyc
+# 云端内置依赖（部署前按 README 步骤重新生成）
+functions/aiDailyCollect/pydantic/
+functions/aiDailyCollect/pydantic_core/
+functions/aiDailyCollect/pydantic-*/
+functions/aiDailyCollect/pydantic_core-*/
+functions/aiDailyCollect/feedparser/
+functions/aiDailyCollect/feedparser-*/
+functions/aiDailyCollect/annotated_types/
+functions/aiDailyCollect/annotated_types-*/
+functions/aiDailyCollect/typing_extensions*/
+functions/aiDailyCollect/sgmllib.py
