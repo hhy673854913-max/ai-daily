@@ -72,6 +72,7 @@ def heuristic_extract(raw: RawItem) -> BriefItem:
         entities=re.findall(r"[A-Z][A-Za-z]{2,}", text)[:5],
         credibility=credibility,
         analysis=analysis,
+        snark=2,  # 兜底点评给温和档
     )
 
 
@@ -94,8 +95,11 @@ def llm_extract(client: Any, raw: RawItem, *, max_tokens: int = 700) -> BriefIte
         summary=str(parsed.get("summary") or "").strip()[:120],
         category=parsed.get("category") if parsed.get("category") in CATEGORY_KEYWORDS else "其他",
         entities=[str(x) for x in (parsed.get("entities") or [])][:8],
-        credibility=int(parsed.get("credibility") or 50),
+        # LLM 没给可信度 = 它对这条也没把握，默认 30 而非 50，
+        # 让"裸链接/谣言类"无信号条目排名垫底，只在实在凑不够时才进精选
+        credibility=int(parsed.get("credibility") or 30),
         analysis=str(parsed.get("analysis") or "").strip()[:300],
+        snark=max(0, min(5, int(parsed.get("snark") or 0))),
     )
 
 

@@ -232,8 +232,16 @@ def _looks_clickbait(title: str) -> bool:
 
 
 def _content_is_too_thin(content: str, title: str) -> bool:
-    """判断正文是否几乎没信息量。"""
-    text = (content or "").strip()
+    """判断正文是否几乎没信息量。
+
+    测量前先剥掉 HTML 标签——InfoQ 等源的视频条目正文只有一个
+    `<a href="...很长的视频URL...">` 标签，原始 HTML 长度和字符多样性
+    都会骗过裸测，剥掉标签后剩下的锚文本通常不足 20 字。
+    """
+    import re
+
+    text = re.sub(r"<[^>]+>", " ", content or "").strip()
+    text = re.sub(r"https?://\S+", " ", text).strip()  # 裸链接 URL 本身不算内容
     if len(text) < 80:
         return True
     # 全是重复字符/太短句，基本不可抽取
