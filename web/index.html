@@ -20,6 +20,7 @@
         <div class="filter-group" id="view-tabs" role="tablist">
           <button class="tab active" data-view="daily" role="tab">每日简报</button>
           <button class="tab" data-view="history" role="tab">历史简报</button>
+          <button class="tab" data-view="qa" role="tab">简报问答</button>
         </div>
         <div class="archive-nav" id="day-nav">
           <button id="prev-day" class="nav-btn" title="前一天">← 前一日</button>
@@ -42,11 +43,32 @@
       <div id="history-list" class="history-list"></div>
       <div id="history-state" class="feed-state"></div>
     </div>
+
+    <div id="qa-view" hidden>
+      <h2 class="section-title">简报问答</h2>
+      <p class="qa-intro">基于历史简报的 RAG 检索问答（LangChain）。问答接口设有门禁：需要访问令牌，
+        且只会检索你有权查看的分类；相关性不足时会拒答而不是编造。</p>
+      <div class="qa-gate">
+        <label for="qa-token">访问令牌</label>
+        <input id="qa-token" type="password" placeholder="向管理员索取的 RAG 令牌" autocomplete="off" />
+        <button id="qa-save-token" class="retry-inline" type="button">保存</button>
+        <span id="qa-gate-hint" class="qa-hint"></span>
+      </div>
+      <form id="qa-form" class="qa-form">
+        <input id="qa-input" type="text" placeholder="提问，例如：最近有哪些大模型融资事件？"
+               autocomplete="off" maxlength="200" />
+        <button type="submit" class="qa-ask-btn">提问</button>
+      </form>
+      <div id="qa-state" class="feed-state"></div>
+      <div id="qa-answer" class="qa-answer"></div>
+      <div id="qa-citations" class="qa-citations"></div>
+    </div>
   </main>
 
   <footer class="footer">
     <p>数据源：机器之心 · 量子位 · 36氪 · InfoQ · TechCrunch · The Verge · arXiv</p>
     <p>流水线：RSS 采集 → 时效过滤 → AI 相关性过滤 → SimHash 去重 → 结构化抽取 → 可信度评分 → 精选评级</p>
+    <p>简报问答：历史简报 RAG 检索（LangChain · 令牌认证 / 分类范围 / 相关性拒答三重门禁）</p>
     <p>由腾讯云 CloudBase 驱动（定时云函数 + 云数据库 + 静态托管） ·
        <a id="github-link" href="https://github.com/hhy673854913-max/ai-daily" target="_blank" rel="noopener">GitHub 仓库</a>
     </p>

@@ -245,12 +245,112 @@
     state.view = view;
     $('daily-view').hidden = view !== 'daily';
     $('history-view').hidden = view !== 'history';
+    $('qa-view').hidden = view !== 'qa';
     document.querySelectorAll('#view-tabs .tab').forEach(function (t) {
       t.classList.toggle('active', t.dataset.view === view);
     });
     renderNav();
     if (view === 'daily') loadDaily();
-    else loadHistory();
+    else if (view === 'history') loadHistory();
+    else initQa();
+  }
+
+  // ---------- 简报问答（RAG，带门禁） ----------
+  var QA_TOKEN_KEY = 'aiDailyRagToken';
+
+  function qaToken() { return localStorage.getItem(QA_TOKEN_KEY) || ''; }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function initQa() {
+    $('qa-token').value = qaToken();
+    updateQaGateHint();
+  }
+
+  function updateQaGateHint() {
+    $('qa-gate-hint').textContent = qaToken()
+      ? '令牌已保存（仅保存在本机浏览器）'
+      : '尚未设置令牌：问答接口已启用访问门禁';
+  }
+
+  $('qa-save-token').onclick = function () {
+    var v = $('qa-token').value.trim();
+    if (v) localStorage.setItem(QA_TOKEN_KEY, v);
+    else localStorage.removeItem(QA_TOKEN_KEY);
+    updateQaGateHint();
+  };
+
+  $('qa-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    askQuestion();
+  });
+
+  function renderQaResult(data) {
+    var box = $('qa-answer');
+    var cit = $('qa-citations');
+    box.innerHTML = '';
+    cit.innerHTML = '';
+    if (data.refused) {
+      var p = el('p', 'qa-refused');
+      p.textContent = '⛔ ' + data.message;
+      box.appendChild(p);
+      return;
+    }
+    var textBox = el('div', 'qa-answer-text');
+    String(data.answer || '').split(/\n{2,}/).forEach(function (para) {
+      var d = el('p');
+      d.innerHTML = escapeHtml(para).replace(/\n/g, '<br>');
+      textBox.appendChild(d);
+    });
+    box.appendChild(textBox);
+
+    (data.citations || []).forEach(function (c, i) {
+      var card = el('div', 'qa-cite');
+      if (c.url) {
+        var a = el('a', 'qa-cite-title', (i + 1) + '. ' + c.title);
+        a.href = c.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        card.appendChild(a);
+      } else {
+        card.appendChild(el('span', 'qa-cite-title', (i + 1) + '. ' + c.title));
+      }
+      var meta = el('div', 'meta');
+      meta.appendChild(el('span', null, c.day || ''));
+      if (c.source) meta.appendChild(el('span', null, c.source));
+      if (c.category) meta.appendChild(el('span', 'badge', c.category));
+      if (c.stars != null) meta.appendChild(el('span', 'cred', '★' + c.stars + '/5'));
+      if (c.score != null) meta.appendChild(el('span', null, '相关度 ' + c.score));
+      card.appendChild(meta);
+      cit.appendChild(card);
+    });
+  }
+
+  function askQuestion() {
+    var q = $('qa-input').value.trim();
+    if (!q) return;
+    if (!qaToken()) {
+      $('qa-state').textContent = '请先设置访问令牌（问答接口已启用门禁）';
+      return;
+    }
+    $('qa-state').textContent = '检索历史简报并生成回答中…';
+    $('qa-answer').innerHTML = '';
+    $('qa-citations').innerHTML = '';
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Rag-Token': qaToken() },
+      body: JSON.stringify({ mode: 'ask', question: q }),
+    }).then(function (r) { return r.json(); }).then(function (body) {
+      if (!body.ok) throw new Error(body.error || 'API error');
+      $('qa-state').textContent = '';
+      renderQaResult(body.data);
+    }).catch(function (e) {
+      $('qa-state').textContent = '问答失败：' + e.message;
+    });
   }
 
   // ---------- 事件 ----------

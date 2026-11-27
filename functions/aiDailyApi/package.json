@@ -4,6 +4,9 @@
   "description": "AI 资讯查询 HTTP 接口",
   "main": "index.js",
   "dependencies": {
-    "@cloudbase/node-sdk": "^2.9.6"
+    "@cloudbase/node-sdk": "^2.9.6",
+    "@langchain/core": "^0.3.0",
+    "@langchain/openai": "^0.3.0",
+    "langchain": "^0.3.37"
   }
 }

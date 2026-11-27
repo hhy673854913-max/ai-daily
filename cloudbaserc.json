@@ -19,7 +19,10 @@
       "type": "Event",
       "runtime": "Nodejs18.15",
       "handler": "index.main",
-      "timeout": 20
+      "timeout": 60,
+      "triggers": [
+        { "name": "rag-sync-0750", "type": "timer", "config": "0 50 7 * * * *" }
+      ]
     }
   ]
 }
