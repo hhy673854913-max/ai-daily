@@ -219,12 +219,17 @@ a { color: inherit; }
 
 /* 星级：底层灰星 + 上层金星按宽度裁剪，天然支持半星 */
 .stars {
-  position: relative;
   display: inline-flex;
   align-items: baseline;
   font-size: 15px;
   line-height: 1;
   letter-spacing: 1px;
+}
+
+/* 裁剪基准层：只包裹五星文本，fg 的 % 宽度相对它计算 */
+.stars-track {
+  position: relative;
+  display: inline-block;
 }
 
 .stars-bg { color: var(--rule); }

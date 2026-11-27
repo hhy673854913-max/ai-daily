@@ -56,18 +56,25 @@ def parse_time(value: str | None) -> datetime | None:
 
 
 def entry_published_at(entry: object) -> datetime | None:
-    """从 feedparser entry 中提取发布时间，兼容 published/updated 及解析后的时间结构。"""
+    """从 feedparser entry 中提取发布时间，兼容 published/updated 及解析后的时间结构。
+
+    feedparser 的 published_parsed/updated_parsed 一律是 UTC——直接当本地时间用
+    会让"前一日过滤"整体错位 8 小时（arXiv 早场论文、欧美源下午稿被误丢）。
+    这里统一换算到本地时区（SCF 内 TZ=Asia/Shanghai），返回 naive datetime。
+    """
+    from datetime import timezone
+
     published_parsed = getattr(entry, "get", lambda *_: None)("published_parsed")
     if published_parsed:
         try:
-            return datetime(*published_parsed[:6])
+            return datetime(*published_parsed[:6], tzinfo=timezone.utc).astimezone().replace(tzinfo=None)
         except Exception:
             pass
 
     updated_parsed = getattr(entry, "get", lambda *_: None)("updated_parsed")
     if updated_parsed:
         try:
-            return datetime(*updated_parsed[:6])
+            return datetime(*updated_parsed[:6], tzinfo=timezone.utc).astimezone().replace(tzinfo=None)
         except Exception:
             pass
 
@@ -178,13 +185,37 @@ def fetch_article_text(url: str, timeout_s: int = 10, max_chars: int = 3000) -> 
     return soup_text[:max_chars]
 
 
-def enrich_empty_content(items: list[RawItem], *, timeout_s: int = 10) -> tuple[list[RawItem], int, int]:
-    """对正文为空的条目抓原文补正文，返回 (更新后的列表, 成功补全数, 失败数)。"""
+# RSS 摘录的正文长度阈值：剥标签/链接后短于此值视为"信息不足"，
+# 需要抓原文补全。The Verge / TechCrunch 等源只给 ~700 字摘录，
+# 摘录又常以事件背景开头——直接抽取曾把"黄仁勋复职"读成"辞职传闻"并打成低可信度。
+CONTENT_THIN_CHARS = 800
+
+
+def stripped_content(content: str) -> str:
+    """剥掉 HTML 标签与裸链接后的纯文本长度，用于衡量正文信息量。"""
+    import re
+
+    text = re.sub(r"<[^>]+>", " ", content or "").strip()
+    return re.sub(r"https?://\S+", " ", text).strip()
+
+
+def content_is_thin(content: str, threshold: int = CONTENT_THIN_CHARS) -> bool:
+    """正文是否信息量不足（空正文也算）。"""
+    return len(stripped_content(content)) < threshold
+
+
+def enrich_empty_content(
+    items: list[RawItem], *, timeout_s: int = 10, thin_chars: int = CONTENT_THIN_CHARS
+) -> tuple[list[RawItem], int, int]:
+    """对正文"为空"或"摘要过短"的条目抓原文补正文。
+
+    返回 (更新后的列表, 成功补全数, 失败数)。抓到的正文比现有内容更长才替换。
+    """
     updated: list[RawItem] = []
     filled = 0
     failed = 0
     for item in items:
-        if item.content.strip():
+        if item.content.strip() and not content_is_thin(item.content, thin_chars):
             updated.append(item)
             continue
         try:
@@ -193,9 +224,11 @@ def enrich_empty_content(items: list[RawItem], *, timeout_s: int = 10) -> tuple[
             failed += 1
             updated.append(item)
             continue
-        if text:
+        if text and len(text) > len(stripped_content(item.content)):
             item.content = text
             filled += 1
+        elif text:
+            filled += 1  # 有正文但不比摘要长，也记成功（至少有内容）
         else:
             failed += 1
         updated.append(item)

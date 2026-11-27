@@ -15,7 +15,8 @@ from pathlib import Path
 
 # SCF 容器默认 UTC；流水线按“前一日”过滤，必须对齐到上海时区
 os.environ["TZ"] = "Asia/Shanghai"
-time.tzset()
+if hasattr(time, "tzset"):  # Windows 无 tzset，仅 Unix 生效（本地调试也不炸）
+    time.tzset()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -25,18 +26,22 @@ from brief.extract import extract_batch, guess_category  # noqa: E402
 from brief.models import PipelineReport  # noqa: E402
 from brief import registry  # noqa: E402
 from brief.sources import (  # noqa: E402
+    content_is_thin,
     enrich_empty_content,
     fetch_all_trusted_sources,
     filter_ai_related,
     filter_low_quality,
     filter_previous_day,
     load_trusted_sources,
+    stripped_content,
 )
 
 INGEST_URL = os.environ.get("INGEST_URL", "")
 INGEST_TOKEN = os.environ.get("INGEST_TOKEN", "")
-MAX_ENRICH = 8  # 串行抓正文很贵，云端只补前 N 条
+MAX_ENRICH = 16  # 串行抓正文很贵，云端只补最贫瘠的 N 条（5s/条 ≈ 80s 上限）
 TOP_N = 10      # 每日精选条数
+PAPER_TOP_N = 3  # 论文类条目（arXiv/Nature 等）每日精选上限，防止灌水挤掉新闻
+PAPER_SOURCES = {"arXiv cs.AI/LG/CL", "Nature 机器智能"}
 STAR_MIN, STAR_MAX = 2.5, 5.0  # 入选即有价值：星级区间 [2.5, 5]，半星颗粒度
 
 
@@ -183,8 +188,17 @@ async def run() -> dict:
 
     time_filtered = filter_previous_day(raw_items, now)
     ai_filtered, _ = filter_ai_related(time_filtered)
-    # 云端串行抓正文有超时风险，只补前 N 条、缩短单条超时
-    head, tail = ai_filtered[:MAX_ENRICH], ai_filtered[MAX_ENRICH:]
+    # 云端串行抓正文有超时风险，缩短单条超时；
+    # 预算不按列表位置分配，而是按"信息量贫瘠程度"挑最缺正文的 N 条
+    # （RSS 摘录短的优先），避免顺位靠后的重大新闻永远拿不到全文
+    # ——黄仁勋复职事件就是被 The Verge 的短摘录害得读反了主旨。
+    thin_items = sorted(
+        (r for r in ai_filtered if content_is_thin(r.content)),
+        key=lambda r: len(stripped_content(r.content)),
+    )
+    enrich_ids = {id(r) for r in thin_items[:MAX_ENRICH]}
+    head = [r for r in ai_filtered if id(r) in enrich_ids]
+    tail = [r for r in ai_filtered if id(r) not in enrich_ids]
     enriched, _, _ = enrich_empty_content(head, timeout_s=5)
     quality_filtered, _, _ = filter_low_quality(enriched + tail)
 
@@ -208,8 +222,11 @@ async def run() -> dict:
                     if not missing:
                         break
     ranked = rank(brief_items, now)
-    # 每个类别至少兜底 1 条，再按分数补齐
-    picked = pick_top_with_coverage(ranked, TOP_N, registry.CATEGORIES)
+    # 每个类别至少兜底 1 条，再按分数补齐；论文类每日封顶 PAPER_TOP_N 条
+    picked = pick_top_with_coverage(
+        ranked, TOP_N, registry.CATEGORIES,
+        paper_sources=PAPER_SOURCES, paper_cap=PAPER_TOP_N,
+    )
     assign_stars(picked)
 
     day = now.strftime("%Y-%m-%d")
@@ -233,6 +250,9 @@ async def run() -> dict:
         {
             "token": INGEST_TOKEN,
             "day": day,
+            # 全量抽取条目入 ai_daily_news 归档（按 urlHash 幂等），
+            # 否则归档集合永远为空，历史检索/漏报排查都无从谈起。
+            "items": [item_to_doc(i, day) for i in brief_items],
             "brief": {
                 "day": day,
                 "items": [item_to_doc(i, day) for i in picked],

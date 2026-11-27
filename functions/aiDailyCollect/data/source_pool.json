@@ -3,6 +3,7 @@
   { "name": "TechCrunch AI", "rss": "https://techcrunch.com/category/artificial-intelligence/feed/", "tier": "权威媒体", "category": "融资" },
   { "name": "Crunchbase News", "rss": "https://news.crunchbase.com/feed/", "tier": "权威媒体", "category": "融资" },
   { "name": "极客公园", "rss": "https://www.geekpark.net/rss", "tier": "垂直媒体", "category": "融资" },
+  { "name": "NVIDIA 官方博客", "rss": "https://blogs.nvidia.com/feed/", "tier": "官方公告", "category": "融资" },
 
   { "name": "The Verge AI", "rss": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "tier": "权威媒体", "category": "产品" },
   { "name": "OpenAI 官方博客", "rss": "https://openai.com/news/rss.xml", "tier": "官方公告", "category": "产品" },

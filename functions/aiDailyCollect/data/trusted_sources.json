@@ -40,5 +40,11 @@
     "rss": "https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=20",
     "tier": "官方公告",
     "enabled": true
+  },
+  {
+    "name": "NVIDIA 官方博客",
+    "rss": "https://blogs.nvidia.com/feed/",
+    "tier": "官方公告",
+    "enabled": true
   }
 ]

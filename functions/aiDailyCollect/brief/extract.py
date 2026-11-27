@@ -29,11 +29,35 @@ SOURCE_TIER = {
 }
 
 CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
-    "融资": ("融资", "估值", "轮", "投资", "IPO"),
+    "融资": ("融资", "估值", "轮", "投资", "IPO", "辞职", "复职", "离职", "董事会", "高管"),
     "产品": ("发布", "上线", "更新", "版本", "功能"),
     "政策": ("政策", "监管", "备案", "法规", "标准"),
     "技术": ("模型", "开源", "论文", "算法", "架构", "Agent", "RAG"),
 }
+
+# 信源等级 → credibility 下限：LLM 面对信息量有限的摘要时容易给出偏低的
+# 「内容分」，把权威信源报道的真新闻压成「不可信」。下限保证分数反映
+# 信源底线，而不是摘要的残缺程度。
+TIER_FLOOR = {"官方公告": 40, "权威媒体": 30, "垂直媒体": 20, "自媒体": 10}
+
+_TIER_BY_NAME: tuple[tuple[str, str], ...] = (
+    ("OpenAI", "官方公告"), ("Anthropic", "官方公告"), ("arXiv", "官方公告"),
+    ("DeepMind", "官方公告"), ("Hugging Face", "官方公告"), ("Meta AI", "官方公告"),
+    ("NVIDIA", "官方公告"),
+    ("TechCrunch", "权威媒体"), ("The Verge", "权威媒体"), ("WIRED", "权威媒体"),
+    ("VentureBeat", "权威媒体"), ("Crunchbase", "权威媒体"), ("MIT", "权威媒体"),
+    ("Ars Technica", "权威媒体"), ("Nature", "权威媒体"), ("InfoQ", "权威媒体"),
+    ("36氪", "权威媒体"),
+    ("机器之心", "垂直媒体"), ("量子位", "垂直媒体"), ("The Decoder", "垂直媒体"),
+    ("少数派", "垂直媒体"), ("爱范儿", "垂直媒体"), ("极客公园", "垂直媒体"),
+)
+
+
+def tier_floor(source_name: str) -> int:
+    for key, tier in _TIER_BY_NAME:
+        if key in source_name:
+            return TIER_FLOOR[tier]
+    return TIER_FLOOR["自媒体"]
 
 
 def guess_category(text: str) -> Category:
@@ -89,15 +113,19 @@ def llm_extract(client: Any, raw: RawItem, *, max_tokens: int = 700) -> BriefIte
     parsed = client_parse(result.content)
     # 入库保留完整标题，展示截断交给前端/CSS
     title = str(parsed.get("title") or raw.title).strip()
+    # 可信度稳定性融合：LLM（qwen 系）对同一事件的评分跨轮方差极大
+    # （黄仁勋复职同一素材 20~65 都出现过），且偏爱苛责细节残缺的真新闻。
+    # 规则分作为柔和下限参与融合：final = max(LLM分, min(规则分, 50))，
+    # 真新闻不会被压到信源底线以下，LLM 的高分判断也仍然有效。
+    llm_cred = max(int(parsed.get("credibility") or 30), tier_floor(raw.source))
+    heuristic_cred = heuristic_extract(raw).credibility
     return BriefItem.from_raw(
         raw,
         title=title,
         summary=str(parsed.get("summary") or "").strip()[:120],
         category=parsed.get("category") if parsed.get("category") in CATEGORY_KEYWORDS else "其他",
         entities=[str(x) for x in (parsed.get("entities") or [])][:8],
-        # LLM 没给可信度 = 它对这条也没把握，默认 30 而非 50，
-        # 让"裸链接/谣言类"无信号条目排名垫底，只在实在凑不够时才进精选
-        credibility=int(parsed.get("credibility") or 30),
+        credibility=max(llm_cred, min(heuristic_cred, 50)),
         analysis=str(parsed.get("analysis") or "").strip()[:300],
         snark=max(0, min(5, int(parsed.get("snark") or 0))),
     )

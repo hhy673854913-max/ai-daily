@@ -115,6 +115,24 @@ async function handleIngest(body) {
     }
   }
 
+  // 已有条目用本轮最新抽取结果覆盖（分数/点评随最新一轮演进），
+  // 否则归档集合停留在首次入库的旧评分，漏报排查会被脏数据误导。
+  let updated = 0;
+  const stale = items.filter(i => i.url && (i.urlHash || i.id) && existing.has(i.urlHash || i.id));
+  for (let i = 0; i < stale.length; i += 10) {
+    const chunk = stale.slice(i, i + 10);
+    await Promise.all(chunk.map(async (it) => {
+      try {
+        const res = await db.collection(NEWS).where({ urlHash: it.urlHash || it.id }).limit(1).get();
+        const doc = res.data && res.data[0];
+        if (doc) {
+          await db.collection(NEWS).doc(doc._id).update({ ...it, day: it.day || day });
+          updated++;
+        }
+      } catch (e) { /* 单条失败跳过 */ }
+    }));
+  }
+
   // 每日简报按 day upsert
   let briefSaved = false;
   if (body.brief && body.brief.markdown) {
@@ -173,6 +191,19 @@ async function handleSourceReport(body) {
         retired++;
       }
     }
+
+    // 1c) 复活：被剔除但仍在候选池中的源，距上次运行满 7 天自动恢复为 candidate 试炼。
+    // RSS 可达性故障（超时/被墙/维护）常常是暂时的，永久剔除会让中文源集体消失、
+    // 覆盖面塌缩——黄仁勋事件中垂直中文源的缺席放大了漏报。
+    let revived = 0;
+    const weekMs = 7 * 24 * 3600e3;
+    const gone = await col.where({ status: 'removed' }).limit(1000).get();
+    for (const d of gone.data || []) {
+      if (d.name && poolNames.has(d.name) && Date.now() - (d.lastRunAt || 0) > weekMs) {
+        await col.doc(d._id).update({ status: 'candidate', consecutiveBad: 0, updatedAt: Date.now() });
+        revived++;
+      }
+    }
   }
 
   // 2) 应用本轮质量报告：EMA 质量分 + 连续不佳计数
@@ -218,7 +249,7 @@ async function handleSourceReport(body) {
       }
     }
   }
-  return json(200, { ok: true, data: { applied: reports.length, promoted, retired: typeof retired === 'number' ? retired : 0 } });
+  return json(200, { ok: true, data: { applied: reports.length, promoted, retired: typeof retired === 'number' ? retired : 0, revived: typeof revived === 'number' ? revived : 0 } });
 }
 
 async function handleGetSources() {

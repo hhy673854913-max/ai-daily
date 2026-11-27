@@ -4,6 +4,11 @@
 
 线上地址：https://ai-daily-florist-prod-d4gtxxh7s9a071ff0.webapps.tcloudbase.com
 
+## 文档
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — 架构、代码结构、环境变量、数据库集合、部署与迭代入口
+- [docs/RAG.md](docs/RAG.md) — RAG 简报问答专题：数据流、三重门禁、嵌入策略、调优与运维
+
 ## 功能
 
 - **每日简报**：当日精选 10 条，含星级评价、可信度、分类（融资/产品/政策/技术）、实体标签、摘要与原文链接

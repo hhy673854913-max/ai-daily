@@ -99,7 +99,10 @@ def build_source_reports(
         creds = cred_by_source.get(name, [])
         cred = sum(creds) / len(creds) if creds else 30.0
         passed = passed_by_source.get(name, 0)
-        yield_score = min(100.0, 35.0 * passed)
+        # 产出分：有稿按稿计；可达但今日无稿（周末/ feed 窗口错位）给保底分，
+        # 不算质量失败——否则 arXiv（周末不更新）、清晨发文的中文源会被
+        # "三次不佳"连环剔除，注册表会再次塌缩。
+        yield_score = min(100.0, 35.0 * passed) if passed > 0 else (15.0 if fetched > 0 else 0.0)
         reachable = 15.0 if fetched > 0 else 0.0
         run_score = round(0.5 * cred + 0.35 * yield_score + reachable, 1)
         reports.append(

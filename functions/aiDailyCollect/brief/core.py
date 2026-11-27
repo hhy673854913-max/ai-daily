@@ -25,11 +25,14 @@ def rank(items: list[BriefItem], now: datetime) -> list[BriefItem]:
 
 
 def pick_top_with_coverage(
-    ranked: list[BriefItem], top_n: int, categories: tuple[str, ...]
+    ranked: list[BriefItem], top_n: int, categories: tuple[str, ...],
+    paper_sources: set[str] | None = None, paper_cap: int = 0,
 ) -> list[BriefItem]:
     """精选 top_n，且每个类别至少兜底 1 条（类别无货时自然跳过）。
 
     先按排名为每个类别取第 1 条，再按分数补齐剩余名额，最终结果保持分数降序。
+    paper_sources/paper_cap：论文类条目每日上限——arXiv/Nature 一次能进窗口
+    几十篇，不封顶会把真新闻挤出精选。
     """
     by_cat: dict[str, list[BriefItem]] = {}
     for it in ranked:
@@ -37,15 +40,28 @@ def pick_top_with_coverage(
 
     picked: list[BriefItem] = []
     picked_ids: set[int] = set()
+    paper_count = 0
+
+    def can_take(it: BriefItem) -> bool:
+        nonlocal paper_count
+        if paper_sources and it.source in paper_sources:
+            if paper_count >= paper_cap:
+                return False
+            paper_count += 1
+        return True
+
     for cat in categories:
         group = by_cat.get(cat)
         if group:
-            picked.append(group[0])
-            picked_ids.add(id(group[0]))
+            for it in group:  # 类别兜底也受论文上限约束，顺延取下一条
+                if id(it) not in picked_ids and can_take(it):
+                    picked.append(it)
+                    picked_ids.add(id(it))
+                    break
     for it in ranked:
         if len(picked) >= top_n:
             break
-        if id(it) not in picked_ids:
+        if id(it) not in picked_ids and can_take(it):
             picked.append(it)
             picked_ids.add(id(it))
     return sorted(picked, key=lambda i: i.score, reverse=True)

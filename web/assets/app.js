@@ -76,21 +76,24 @@
     var wrap = el('span', 'stars');
     wrap.setAttribute('role', 'img');
     wrap.setAttribute('aria-label', '星级 ' + stars + ' / 5');
-    var bg = el('span', 'stars-bg', '★★★★★');
+    // 裁剪层必须只包裹五星文本：fg 的百分比宽度相对 stars-track 计算。
+    // 若相对含数字的外层，数字宽度会摊进裁剪比例，星星会系统性偏多显示。
+    var track = el('span', 'stars-track');
+    track.appendChild(el('span', 'stars-bg', '★★★★★'));
     var fg = el('span', 'stars-fg', '★★★★★');
     fg.style.width = (stars / 5 * 100) + '%';
-    wrap.appendChild(bg);
-    wrap.appendChild(fg);
+    track.appendChild(fg);
+    wrap.appendChild(track);
     wrap.appendChild(el('span', 'stars-num', String(stars)));
     return wrap;
   }
 
   // ---------- 每日简报渲染 ----------
-  function renderReportLine(report) {
+  function renderReportLine(report, pickedCount) {
     var box = $('pipeline-report');
     if (!report) { box.textContent = ''; return; }
     box.textContent = '采集 ' + report.fetched + ' 条 → 过滤后 ' + report.after_dedup +
-      ' 条 → 精选 ' + (report.extracted_ok != null ? '10' : '') + ' 条' +
+      ' 条 → 精选 ' + (pickedCount != null ? pickedCount : '—') + ' 条' +
       ' ｜ 平均可信度 ' + report.avg_credibility + ' ｜ 耗时 ' + report.duration_s + 's';
   }
 
@@ -185,7 +188,7 @@
     state.loading = true;
     renderSkeleton();
     setDailyState('');
-    renderReportLine(null);
+    renderReportLine(null, null);
 
     fetchJson({ mode: 'brief', day: state.day }).then(function (data) {
       var list = $('brief-list');
@@ -196,7 +199,7 @@
         state.loading = false;
         return;
       }
-      renderReportLine(brief.report);
+      renderReportLine(brief.report, brief.items.length);
       brief.items.forEach(function (item, i) {
         list.appendChild(renderBriefItem(item, i));
       });
@@ -204,7 +207,7 @@
       state.loading = false;
     }).catch(function (e) {
       $('brief-list').innerHTML = '';
-      renderReportLine(null);
+      renderReportLine(null, null);
       setDailyState('加载失败：' + e.message, true);
       state.loading = false;
     });
